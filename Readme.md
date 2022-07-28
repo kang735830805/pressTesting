@@ -8,7 +8,7 @@
 #"sdkPath", "s", "SdkConfig路径"
 ./main tps -l 1 -c 1 -t 1 -n fact -m save -a "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}" -s ./sdk_config.yml
 ./main tps -l 1000  -t 500 -n fact -m save -a "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}" -s "./sdk_config.yml,./sdk_config2.yml"
-./main tps -l 1  -t 1 -n fact -m save -a "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}" -s "./sdk_config.yml,./sdk_config2.yml"
+./main tps -l 10  -t 100 -n fact -m save -a "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}" -s "./sdk_config.yml,./sdk_config2.yml"
 ```
 
 ```shell
@@ -19,6 +19,6 @@
 
 ```shell
 #qps 测试
-./main qps -l 1 -t 1 -i '1705f26839db6648cad8cce77b12d6c3a36a55ef57b944d7becb5b5b98470350' -s "./sdk_config.yml"
+./main qps -l 10 -t 1000 -i '1705f56583e6cd78ca18426f40000b933b8842529c9346b49f4bbcae4b57a57e' -s "./sdk_config.yml"
 ./main qps -l 1000 -t 1000 -i '1705f26839db6648cad8cce77b12d6c3a36a55ef57b944d7becb5b5b98470350' -s "./sdk_config.yml,./sdk_config2.yml"
 ```

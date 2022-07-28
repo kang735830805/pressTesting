@@ -50,16 +50,16 @@ func syncTps(num int) error {
 		clients[i]=sdkop.Connect_chain(1, sdkList[i])
 	}
 	wg.Add(num)
-	timeStart := time.Now().UnixNano()
+	//timeStart := time.Now().UnixNano()
 	sNum := 0
-	for i := 0 ; i <= len(sdkList)-1; i++ {
+	for i := 0 ; i <= num; i++ {
 		//go InvoceChaincode(clients[i], loop, name, method, args, m)
 		if sNum == len(sdkList)-1 {
 			sNum = 0
 		}
 		go getTxByTxId(clients[sNum], txId)
 	}
-	//timeStart := time.Now().UnixNano()
+	timeStart := time.Now().UnixNano()
 	wg.Wait()
 
 	timeCount := loop
@@ -79,5 +79,4 @@ func getTxByTxId(client *sdk.ChainClient, txid string)  {
 		fmt.Println(err)
 	}
 	wg.Done()
-
 }

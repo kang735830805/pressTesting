@@ -60,7 +60,7 @@ func syncTps(num int) (err error) {
 	timeStart := time.Now().UnixNano()
 	sNum := 0
 
-	for i := 0 ; i <= len(sdkList)-1; i++ {
+	for i := 0 ; i <= num; i++ {
 		if sNum == len(sdkList)-1 {
 			sNum = 0
 		}
