@@ -5,6 +5,7 @@ import (
 	"chainpress/pkg/sdkop"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -47,17 +48,24 @@ func RunTps() (err error) {
 
 
 func syncTps(num int) (err error) {
-	clients:=make([]*sdk.ChainClient,num)
-	for i := 0; i < num;i++ {
-		clients[i]=sdkop.Connect_chain(1, sdkPath)
+	sdkList := strings.Split(sdkPath, ",")
+
+	clients:=make([]*sdk.ChainClient,len(sdkList))
+	fmt.Println(len(sdkList)-1)
+	for i := 0; i <= len(sdkList)-1;i++ {
+		fmt.Println(i)
+		clients[i]=sdkop.Connect_chain(1, sdkList[i])
 	}
 	wg.Add(num)
 	timeStart := time.Now().UnixNano()
+	sNum := 0
 
-	for i := 0 ; i < num; i++ {
-		go InvoceChaincode(clients[i], loop, name, method, args)
+	for i := 0 ; i <= len(sdkList)-1; i++ {
+		if sNum == len(sdkList)-1 {
+			sNum = 0
+		}
+		go InvoceChaincode(clients[sNum], loop, name, method, args)
 	}
-
 
 	wg.Wait()
 

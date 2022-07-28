@@ -5,6 +5,7 @@ import (
 	"chainpress/pkg/sdkop"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -41,25 +42,31 @@ func RunQps() (err error) {
 }
 
 func syncTps(num int) error {
-	clients:=make([]*sdk.ChainClient,num)
+	sdkList := strings.Split(sdkPath, ",")
 
-	for i := 0; i < num;i++ {
-		clients[i]=sdkop.Connect_chain(1, sdkPath)
+	clients:=make([]*sdk.ChainClient,len(sdkList))
+
+	for i := 0; i <= len(sdkList)-1;i++ {
+		clients[i]=sdkop.Connect_chain(1, sdkList[i])
 	}
 	wg.Add(num)
-	timeStart := time.Now().Unix()
-	for i := 0 ; i < num; i++ {
+	timeStart := time.Now().UnixNano()
+	sNum := 0
+	for i := 0 ; i <= len(sdkList)-1; i++ {
 		//go InvoceChaincode(clients[i], loop, name, method, args, m)
-		go getTxByTxId(clients[i], txId)
+		if sNum == len(sdkList)-1 {
+			sNum = 0
+		}
+		go getTxByTxId(clients[sNum], txId)
 	}
 	//timeStart := time.Now().UnixNano()
 	wg.Wait()
 
 	timeCount := loop
-	//timeEnd := time.Now().UnixNano()
-	timeEnd := time.Now().Unix()
+	timeEnd := time.Now().UnixNano()
+	//timeEnd := time.Now().Unix()
 	count := float64(timeCount)
-	timeResult := float64(timeEnd-timeStart)
+	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
 	fmt.Println(timeResult)
 	fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "QPS:", count/timeResult)
 	return nil

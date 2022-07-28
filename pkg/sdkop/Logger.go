@@ -9,7 +9,7 @@ func getDefaultLogger() *zap.SugaredLogger {
 	config := log.LogConfig{
 		Module:       "[SDK]",
 		LogPath:      "./sdk.log",
-		LogLevel:     log.LEVEL_DEBUG,
+		LogLevel:     log.LEVEL_ERROR,
 		MaxAge:       30,
 		JsonFormat:   false,
 		ShowLine:     true,

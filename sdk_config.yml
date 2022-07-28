@@ -40,7 +40,7 @@ chain_client:
     - # 节点地址，格式为：IP:端口:连接数
       node_addr: "127.0.0.1:12301"
       # 节点连接数
-      conn_cnt: 10
+      conn_cnt: 1
       # RPC连接是否启用双向TLS认证
       enable_tls: true
       # 信任证书池路径
@@ -58,8 +58,8 @@ chain_client:
     max_send_message_size: 16 # grpc客户端发送消息时，允许单条message大小的最大值(MB)
   pkcs11:
     enabled: false # pkcs11 is not used by default
-    library: /usr/local/lib64/pkcs11/libupkcs11.so # path to the .so file of pkcs11 interface
-    label: HSM # label for the slot to be used
-    password: 11111111 # password to logon the HSM(Hardware security module)
-    session_cache_size: 10 # size of HSM session cache, default to 10
-    hash: "SHA256" # hash algorithm used to compute SKI
+#    library: /usr/local/lib64/pkcs11/libupkcs11.so # path to the .so file of pkcs11 interface
+#    label: HSM # label for the slot to be used
+#    password: 11111111 # password to logon the HSM(Hardware security module)
+#    session_cache_size: 10 # size of HSM session cache, default to 10
+#    hash: "SHA256" # hash algorithm used to compute SKI

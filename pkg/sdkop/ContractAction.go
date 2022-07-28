@@ -58,7 +58,7 @@ func createClientWithConfig(sdk_conf_path string) (*sdk.ChainClient, error) {
 	, sdk.WithUserKeyFilePath(clientKeyFilePaths),
 		sdk.WithUserCrtFilePath(clientCrtFilePaths), sdk.WithChainClientOrgId(orgId), sdk.WithChainClientChainId(chainId)
 	*/
-	chainClient, err := sdk.NewChainClient(sdk.WithConfPath(sdk_conf_path))
+	chainClient, err := sdk.NewChainClient(sdk.WithConfPath(sdk_conf_path), sdk.WithChainClientLogger(getDefaultLogger()))
 	if err != nil {
 		return nil, err
 	}
