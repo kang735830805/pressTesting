@@ -98,23 +98,7 @@ func UserContractAssetQuery(client *sdk.ChainClient, id bool,  name, method, arg
 	kvs := []*common.KeyValuePair{}
 
 	for k,v := range m {
-		//if reflect.TypeOf(v) == bool
-		//switch v
 
-		//if !unicode.IsDigit(*(*rune)(unsafe.Pointer(&v))) {
-		//num, ok := strconv.ParseInt(v,10, 64)
-		//if ok == nil {
-		//	kvs = append(kvs, &common.KeyValuePair{
-		//		Key: k,
-		//		Value: *(*[]byte)(unsafe.Pointer(&num)),
-		//	})
-		//} else {
-		//	kvs = append(kvs, &common.KeyValuePair{
-		//		Key: k,
-		//		Value: *(*[]byte)(unsafe.Pointer(&v)),
-		//	})
-		//}
-		//}
 		kvs = append(kvs, &common.KeyValuePair{
 			Key: k,
 			Value: *(*[]byte)(unsafe.Pointer(&v)),
@@ -122,15 +106,11 @@ func UserContractAssetQuery(client *sdk.ChainClient, id bool,  name, method, arg
 
 	}
 	resp, err := client.QueryContract(name, method, kvs, 10)
-	//if id {
-	//	resp, err = client1.QueryContract(name, method, kvs, 10)
-	//}
 
 	if err!=nil{
 		fmt.Printf("get error: %+v\n",err)
 		return ""
 	}
-	//fmt.Printf("QUERY asset contract [%s] resp: %+v\n", method, resp)
 
 	err = examples.CheckProposalRequestResp(resp, true)
 	if err!=nil{
@@ -141,11 +121,12 @@ func UserContractAssetQuery(client *sdk.ChainClient, id bool,  name, method, arg
 }
 
 
-func UserContractAssetInvoke(client *sdk.ChainClient, name, method, args, amount, addr string, withSyncResult bool){
-	err:=userContractAssetInvoke(client, name, method, args, amount,addr,withSyncResult)
-	if err!=nil{
-		fmt.Printf("invoke error : %v\n",err);
+func UserContractAssetInvoke(client *sdk.ChainClient, name, method, args, amount, addr string, withSyncResult bool) string {
+	txid, err := userContractAssetInvoke(client, name, method, args, amount,addr,withSyncResult)
+	if err!=nil {
+		fmt.Printf("invoke error : %v\n",err)
 	}
+	return txid
 }
 
 func GetBalance(client *sdk.ChainClient, addr string) {

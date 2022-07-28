@@ -8,21 +8,21 @@ chain_client:
 #  org_id: "wx-org3.chainmaker.org"
   # 客户端用户私钥路径
 #  user_key_file_path: "./testdata/crypto-config/wx-org.chainmaker.org/user/client1/client1.tls.key"
-  user_key_file_path: "./testdata/crypto-config/wx-org.chainmaker.org/user/admin1/admin1.tls.key"
+  user_key_file_path: "../../testdata/crypto-config/wx-org.chainmaker.org/user/admin1/admin1.tls.key"
 #  user_key_file_path: "./testdata/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.key"
 #  user_key_file_path: "./testdata/crypto-config/wx-org3.chainmaker.org/user/client1/client1.tls.key"
   # 客户端用户证书路径
 #  user_crt_file_path: "./testdata/crypto-config/wx-org.chainmaker.org/user/client1/client1.tls.crt"
-  user_crt_file_path: "./testdata/crypto-config/wx-org.chainmaker.org/user/admin1/admin1.tls.crt"
+  user_crt_file_path: "../../testdata/crypto-config/wx-org.chainmaker.org/user/admin1/admin1.tls.crt"
 #  user_crt_file_path: "./testdata/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.crt"
 #  user_crt_file_path: "./testdata/crypto-config/wx-org3.chainmaker.org/user/client1/client1.tls.crt"
   # 客户端用户交易签名私钥路径(若未设置，将使用user_key_file_path)
-  user_sign_key_file_path: "./testdata/crypto-config/wx-org.chainmaker.org/user/admin1/admin1.sign.key"
+  user_sign_key_file_path: "../../testdata/crypto-config/wx-org.chainmaker.org/user/admin1/admin1.sign.key"
 #  user_sign_key_file_path: "./testdata/crypto-config/wx-org.chainmaker.org/user/client1/client1.sign.key"
 #  user_sign_key_file_path: "./testdata/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.key"
 #  user_sign_key_file_path: "./testdata/crypto-config/wx-org3.chainmaker.org/user/client1/client1.sign.key"
   # 客户端用户交易签名证书路径(若未设置，将使用user_crt_file_path)
-  user_sign_crt_file_path: "./testdata/crypto-config/wx-org.chainmaker.org/user/admin1/admin1.sign.crt"
+  user_sign_crt_file_path: "../../testdata/crypto-config/wx-org.chainmaker.org/user/admin1/admin1.sign.crt"
 #  user_sign_crt_file_path: "./testdata/crypto-config/wx-org.chainmaker.org/user/client1/client1.sign.crt"
 #  user_sign_crt_file_path: "./testdata/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.crt"
 #  user_sign_crt_file_path: "./testdata/crypto-config/wx-org3.chainmaker.org/user/client1/client1.sign.crt"
@@ -45,9 +45,7 @@ chain_client:
       enable_tls: true
       # 信任证书池路径
       trust_root_paths:
-        - "./testdata/crypto-config/wx-org.chainmaker.org/ca"
-        - "./testdata/crypto-config/wx-org2.chainmaker.org/ca"
-        - "./testdata/crypto-config/wx-org3.chainmaker.org/ca"
+        - "../../testdata/crypto-config/wx-org.chainmaker.org/ca"
       # TLS hostname
       tls_host_name: "chainmaker.org"
   archive:

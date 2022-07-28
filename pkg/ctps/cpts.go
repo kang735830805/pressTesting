@@ -1,1 +1,81 @@
 package ctps
+
+import (
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"chainpress/pkg/sdkop"
+	"fmt"
+	"strconv"
+	"sync"
+	"time"
+)
+
+var wg sync.WaitGroup
+
+func RunCTps() (err error) {
+	if method == "" || name == "" || sdkPath == "" {
+		return fmt.Errorf("method 、 name、sdkpath not nil")
+	}
+	if threadNum < 1 {
+		return fmt.Errorf("threadNum should not less 1")
+	}
+	clients1:=make([]*sdk.ChainClient,concurrency)
+	for i := 0; i < concurrency;i++ {
+		clients1[i]=sdkop.Connect_chain(1, sdkPath)
+	}
+	fmt.Println("============ application-golang starts ============")
+
+	for i := 0; i < concurrency; i = i + threadNum {
+
+		if concurrency < i + threadNum && concurrency > i {
+			err = syncTps(concurrency-i)
+		} else if concurrency > threadNum {
+			err = syncTps(threadNum)
+		} else {
+			err = syncTps(concurrency)
+		}
+
+	}
+
+	return err
+}
+
+func syncTps(num int) error {
+	clients:=make([]*sdk.ChainClient,num)
+
+	for i := 0; i < num;i++ {
+		clients[i]=sdkop.Connect_chain(1, sdkPath)
+	}
+	wg.Add(num)
+	m := sync.Map{}
+	for i := 0 ; i < num; i++ {
+		go InvoceChaincode(clients[i], loop, name, method, args, m)
+	}
+	timeStart := time.Now().UnixNano()
+	wg.Wait()
+
+	//m.Range(func(key, value interface{}) bool {
+	//
+	//})
+	timeCount := loop * concurrency
+	timeEnd := time.Now().UnixNano()
+	count := float64(timeCount)
+	fmt.Println(count)
+	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
+	fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "TPS:", count/timeResult)
+	return nil
+}
+
+
+//func InvoceChaincode(client1,client2 *sdk.ChainClient, loop int, name, method, args string){
+func InvoceChaincode(client *sdk.ChainClient, loop int, name, method, args string, m sync.Map){
+	var txid string = ""
+	addr2 := sdkop.UserContractAssetQuery(client, false, name, method, args)
+	for i := 0; i < loop; i++ {
+		txid = sdkop.UserContractAssetInvoke(client, name, method, args, "1", addr2, false) //最后一个参数为是否同步获取交易结果？
+	}
+	wg.Done()
+	if txid != "" {
+		tran, _ := client.GetTxByTxId(txid)
+		m.Store(txid, tran)
+	}
+}

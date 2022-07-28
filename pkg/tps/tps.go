@@ -12,13 +12,8 @@ import (
 var wg = sync.WaitGroup{}
 
 
-
-//func invoceChaincode(client1,client2 *sdk.ChainClient, loop int, name, method, args string){
-func invoceChaincode(client *sdk.ChainClient, loop int, name, method, args string){
-	//addr1 := sdkop.UserContractAssetQuery(true)  //true 为node1 ，else node0
-	//fmt.Printf("client1 address: %s\n", addr1)
-
-	//addr2 := sdkop.UserContractAssetQuery(client1, client2,false, name, method, args)
+//func InvoceChaincode(client1,client2 *sdk.ChainClient, loop int, name, method, args string){
+func InvoceChaincode(client *sdk.ChainClient, loop int, name, method, args string){
 	addr2 := sdkop.UserContractAssetQuery(client, false, name, method, args)
 	for i := 0; i < loop; i++ {
 		sdkop.UserContractAssetInvoke(client, name, method, args, "1", addr2, false) //最后一个参数为是否同步获取交易结果？
@@ -29,31 +24,48 @@ func invoceChaincode(client *sdk.ChainClient, loop int, name, method, args strin
 //loop 循环次数    每个并发循环次数
 //concurrency 连接网关数  并发数
 //func RunTps(loop, concurrency int, name, method, args, sdkPath string)  {
-func RunTps() error {
+func RunTps() (err error) {
 	if method == "" || name == "" || sdkPath == "" {
 		return fmt.Errorf("method 、 name、sdkpath not nil")
 	}
-	clients1:=make([]*sdk.ChainClient,concurrency)
-	//clients2:=make([]*sdk.ChainClient,concurrency)
-	for i := 0; i < concurrency;i++ {
-		clients1[i]=sdkop.Connect_chain(1, sdkPath)
-		//clients2[i]=sdkop.Connect_chain(2)
-	}
+
 	fmt.Println("============ application-golang starts ============")
 
-	wg.Add(concurrency)
-	for i := 0; i < concurrency; i++ {
-		//go invoceChaincode(clients1[i], clients2[i], loop, name, method, args)
-		go invoceChaincode(clients1[i], loop, name, method, args)
+	for i := 0; i < concurrency; i= i+threadNum {
+
+		if concurrency < i + threadNum && concurrency > i  {
+			err = syncTps(concurrency-i)
+		} else if concurrency > threadNum {
+			err = syncTps(threadNum)
+		} else {
+			err = syncTps(concurrency)
+		}
 	}
 
+	return err
+}
+
+
+func syncTps(num int) (err error) {
+	clients:=make([]*sdk.ChainClient,num)
+	for i := 0; i < num;i++ {
+		clients[i]=sdkop.Connect_chain(1, sdkPath)
+	}
+	wg.Add(num)
 	timeStart := time.Now().UnixNano()
+
+	for i := 0 ; i < num; i++ {
+		go InvoceChaincode(clients[i], loop, name, method, args)
+	}
+
+
 	wg.Wait()
 
 	timeCount := loop * concurrency
 	timeEnd := time.Now().UnixNano()
 	count := float64(timeCount)
 	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
+	//timeResult := float64(timeEnd-timeStart)
 	fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "TPS:", count/timeResult)
-	return nil
+	return err
 }

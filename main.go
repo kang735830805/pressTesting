@@ -1,6 +1,8 @@
 package main
 
 import (
+	"chainpress/pkg/ctps"
+	"chainpress/pkg/qps"
 	"chainpress/pkg/tps"
 	"github.com/spf13/cobra"
 	"strings"
@@ -21,7 +23,8 @@ func main()  {
 	}
 
 	mainCmd.AddCommand(tps.TpsCMD())
-
+	mainCmd.AddCommand(ctps.CtpsCMD())
+	mainCmd.AddCommand(qps.QpsCMD())
 
 
 	//if 1==*winit {

@@ -46,8 +46,6 @@ chain_client:
       # 信任证书池路径
       trust_root_paths:
         - "./testdata/crypto-config/wx-org.chainmaker.org/ca"
-        - "./testdata/crypto-config/wx-org2.chainmaker.org/ca"
-        - "./testdata/crypto-config/wx-org3.chainmaker.org/ca"
       # TLS hostname
       tls_host_name: "chainmaker.org"
   archive:

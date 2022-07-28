@@ -224,15 +224,15 @@ func userContractAssetCreate(client *sdk.ChainClient,
 //}
 
 func invokeUserContract(client *sdk.ChainClient, contractName, method, txId string,
-	kvs []*common.KeyValuePair, withSyncResult bool) error {
+	kvs []*common.KeyValuePair, withSyncResult bool) (string, error) {
 
 	resp, err := client.InvokeContract(contractName, method, txId, kvs, 10, withSyncResult)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if resp.Code != common.TxStatusCode_SUCCESS {
-		return fmt.Errorf("invoke contract failed, [code:%d]/[msg:%s]\n", resp.Code, resp.Message)
+		return "", fmt.Errorf("invoke contract failed, [code:%d]/[msg:%s]\n", resp.Code, resp.Message)
 	}
 
 	if !withSyncResult {
@@ -241,21 +241,21 @@ func invokeUserContract(client *sdk.ChainClient, contractName, method, txId stri
 		fmt.Printf("invoke contract success, resp: [code:%d]/[msg:%s]/[contractResult:%s]\n", resp.Code, resp.Message, resp.ContractResult)
 	}
 
-	return nil
+	return resp.TxId, err
 }
 
-func userContractAssetInvokeRegister(client *sdk.ChainClient, method string, withSyncResult bool) error{
-	err := invokeUserContract(client, assetContractName, method, "", nil, withSyncResult)
-	return err
+func userContractAssetInvokeRegister(client *sdk.ChainClient, method string, withSyncResult bool) (string, error) {
+	txid, err := invokeUserContract(client, assetContractName, method, "", nil, withSyncResult)
+	return txid, err
 }
 
-func userContractAssetInvoke(client *sdk.ChainClient, name, method, args, amount, addr string, withSyncResult bool)error{
-	//params := map[string]string{
-	//	"amount": amount,
-	//	"to":     addr,
-	//}
+func userContractAssetInvoke(client *sdk.ChainClient, name, method, args, amount, addr string, withSyncResult bool) (string, error) {
+
 	m := make(map[string]string)
-	json.Unmarshal([]byte(args), &m)
+	err := json.Unmarshal([]byte(args), &m)
+	if err != nil {
+		return "", err
+	}
 	kvs := []*common.KeyValuePair{}
 
 	for k,v := range m {
@@ -264,16 +264,10 @@ func userContractAssetInvoke(client *sdk.ChainClient, name, method, args, amount
 			Value: *(*[]byte)(unsafe.Pointer(&v)),
 		})
 	}
-	//kvs = append(kvs, &common.KeyValuePair{
-	//	Key: "amount",
-	//	Value: []byte(amount),
-	//}, &common.KeyValuePair{
-	//	Key: "to",
-	//	Value: []byte(addr),
-	//})
-	err := invokeUserContract(client, name, method, "", kvs, withSyncResult)
 
-	return err
+	txid, err := invokeUserContract(client, name, method, "", kvs, withSyncResult)
+
+	return txid, err
 }
 
 func testUserContractAssetInvoke(client *sdk.ChainClient, method string, amount, addr string, withSyncResult bool) {
@@ -288,7 +282,8 @@ func testUserContractAssetInvoke(client *sdk.ChainClient, method string, amount,
 		},
 	}
 
-	err := invokeUserContract(client, assetContractName, method, "", kvs, withSyncResult)
+	txid, err := invokeUserContract(client, assetContractName, method, "", kvs, withSyncResult)
+	fmt.Println(txid)
 	if err != nil {
 		log.Fatalln(err)
 	}
