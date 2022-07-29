@@ -1,17 +1,12 @@
 package sdkop
 
 import (
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	"chainmaker.org/chainmaker/sdk-go/v2/examples"
-	"encoding/json"
+	sdk "chainmaker.org/chainmaker-sdk-go"
+	"chainmaker.org/chainmaker-sdk-go/pb/protogo/common"
 	"fmt"
 	"strings"
-	"unsafe"
 
 	//"chainmaker.org/chainmaker-sdk-go/pb/protogo/common"
-	"log"
 )
 
 var (
@@ -140,33 +135,48 @@ func createAdminWithConfig(orgId string) (*sdk.ChainClient, error) {
 //}
 
 
-func createUserContract(client *sdk.ChainClient, admin1, admin2, admin3, admin4 string,
+func createUserContract(client *sdk.ChainClient,
 	contractName, version, byteCodePath string, runtime common.RuntimeType, kvs []*common.KeyValuePair,
-	withSyncResult bool) (*common.TxResponse, error) {
+	withSyncResult bool, admin... *sdk.ChainClient) (resp *common.TxResponse, err error) {
 
-	payload, err := client.CreateContractCreatePayload(contractName, version, byteCodePath, runtime, kvs)
+	payloadBytes, err := client.CreateContractCreatePayload(contractName, version, byteCodePath, runtime, kvs)
 	if err != nil {
 		return nil, err
 	}
 
 	//endorsers, err := examples.GetEndorsers(payload, admin1, admin2, admin3, admin4)
-	endorsers, err := examples.GetEndorsersWithAuthType(crypto.HashAlgoMap[client.GetHashType()],
-		client.GetAuthType(), payload, admin1, admin2, admin3, admin4)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.SendContractManageRequest(payload, endorsers, createContractTimeout, withSyncResult)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: ??
-	//err = examples.CheckProposalRequestResp(resp, true)
+	//endorsers, err := examples.GetEndorsersWithAuthType(crypto.HashAlgoMap[client.GetHashType()],
+	//	client.GetAuthType(), payload, admin1, admin2, admin3, admin4)
 	//if err != nil {
 	//	return nil, err
 	//}
 
+	// 各组织Admin权限用户签名
+	b := make([][]byte, len(admin))
+	for _, i := range admin {
+		signedPayloadBytes, err := i.SignContractManagePayload(payloadBytes)
+		if err != nil {
+			return nil, err
+		}
+		b = append(b, signedPayloadBytes)
+	}
+
+	// 收集并合并签名
+	mergeSignedPayloadBytes, err := client.MergeContractManageSignedPayload(b)
+	if err != nil {
+		return nil, err
+	}
+
+	// 发送创建合约请求
+	resp, err = client.SendContractManageRequest(mergeSignedPayloadBytes, createContractTimeout, withSyncResult)
+	if err != nil {
+		return nil, err
+	}
+	//err = sdk.CheckProposalRequestResp_ext(resp, true)
+	//
+	//if err != nil {
+	//	return nil, err
+	//}
 	return resp, nil
 }
 
@@ -186,11 +196,11 @@ func createUserContract(client *sdk.ChainClient, admin1, admin2, admin3, admin4 
 //}
 
 
-func userContractAssetCreate(client *sdk.ChainClient,
-	admin1, admin2, admin3, admin4 string, kvs []*common.KeyValuePair, withSyncResult bool, isIgnoreSameContract bool) {
+func userContractAssetCreate(client *sdk.ChainClient, kvs []*common.KeyValuePair, withSyncResult bool, isIgnoreSameContract bool,
+	admin... *sdk.ChainClient) {
 
-	resp, err := createUserContract(client, admin1, admin2, admin3, admin4,
-		assetContractName, assetVersion, assetByteCodePath, common.RuntimeType_WASMER, kvs, withSyncResult)
+	resp, err := createUserContract(client,
+		assetContractName, assetVersion, assetByteCodePath, common.RuntimeType_WASMER, kvs, withSyncResult, admin...)
 	if !(isIgnoreSameContract && err!=nil&& strings.Contains(err.Error(),"Already")) {
 		if nil!=err{
 			fmt.Printf("%+v %T\n",err,err)
@@ -224,9 +234,9 @@ func userContractAssetCreate(client *sdk.ChainClient,
 //}
 
 func invokeUserContract(client *sdk.ChainClient, contractName, method, txId string,
-	kvs []*common.KeyValuePair, withSyncResult bool) (string, error) {
+	params map[string]string, withSyncResult bool) (string, error) {
 
-	resp, err := client.InvokeContract(contractName, method, txId, kvs, 10, withSyncResult)
+	resp, err := client.InvokeContract(contractName, method, txId, params, 10, withSyncResult)
 	if err != nil {
 		return "", err
 	}
@@ -236,12 +246,12 @@ func invokeUserContract(client *sdk.ChainClient, contractName, method, txId stri
 	}
 
 	if !withSyncResult {
-		fmt.Printf("invoke contract success, resp: [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, resp.TxId)
+		fmt.Printf("invoke contract success, resp: [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, resp.ContractResult)
 	} else {
 		fmt.Printf("invoke contract success, resp: [code:%d]/[msg:%s]/[contractResult:%s]\n", resp.Code, resp.Message, resp.ContractResult)
 	}
 
-	return resp.TxId, err
+	return resp.ContractResult.String(), err
 }
 
 func userContractAssetInvokeRegister(client *sdk.ChainClient, method string, withSyncResult bool) (string, error) {
@@ -249,62 +259,73 @@ func userContractAssetInvokeRegister(client *sdk.ChainClient, method string, wit
 	return txid, err
 }
 
-func userContractAssetInvoke(client *sdk.ChainClient, name, method, args, amount, addr string, withSyncResult bool) (string, error) {
+func userContractAssetInvoke(client *sdk.ChainClient, name, method, amount, addr string, args map[string]string, withSyncResult bool) (string, error) {
 
-	m := make(map[string]string)
-	err := json.Unmarshal([]byte(args), &m)
-	if err != nil {
-		return "", err
-	}
-	kvs := []*common.KeyValuePair{}
-
-	for k,v := range m {
-		kvs = append(kvs, &common.KeyValuePair{
-			Key: k,
-			Value: *(*[]byte)(unsafe.Pointer(&v)),
-		})
-	}
-
-	txid, err := invokeUserContract(client, name, method, "", kvs, withSyncResult)
+	txid, err := invokeUserContract(client, name, method, "", args, withSyncResult)
 
 	return txid, err
 }
 
-func testUserContractAssetInvoke(client *sdk.ChainClient, method string, amount, addr string, withSyncResult bool) {
-	kvs := []*common.KeyValuePair{
-		{
-			Key:   "amount",
-			Value: []byte(amount),
-		},
-		{
-			Key:   "to",
-			Value: []byte(addr),
-		},
-	}
+//func testUserContractAssetInvoke(client *sdk.ChainClient, method string, amount, addr string, withSyncResult bool) {
+//	kvs := []*common.KeyValuePair{
+//		{
+//			Key:   "amount",
+//			Value: []byte(amount),
+//		},
+//		{
+//			Key:   "to",
+//			Value: []byte(addr),
+//		},
+//	}
+//
+//	txid, err := invokeUserContract(client, assetContractName, method, "", kvs, withSyncResult)
+//	fmt.Println(txid)
+//	if err != nil {
+//		log.Fatalln(err)
+//	}
+//}
 
-	txid, err := invokeUserContract(client, assetContractName, method, "", kvs, withSyncResult)
-	fmt.Println(txid)
-	if err != nil {
-		log.Fatalln(err)
-	}
-}
+//func UserContractAssetQuery(method string, client1,client2 *sdk.ChainClient,id bool) string {
+//	/*
+//		client *sdk.ChainClient, method string, params map[string]string
+//	*/
+//	method:="query_address"
+//	var params map[string]string
+//	resp, err := client2.QueryContract(assetContractName, method, params, -1)
+//	if id{
+//		resp, err = client1.QueryContract(assetContractName, method, params, -1)
+//	}
+//
+//	if err!=nil{
+//		fmt.Printf("get error: %+v\n",err);
+//		return ""
+//	}
+//	//fmt.Printf("QUERY asset contract [%s] resp: %+v\n", method, resp)
+//
+//	//err = sdk.CheckProposalRequestResp_ext(resp, true)
+//	//if err!=nil{
+//	//	fmt.Printf("check get error: %+v\n",err);
+//	//	return ""
+//	//}
+//	return string(resp.ContractResult.Result)
+//}
 
-func userContractAssetQuery(method string, kvs []*common.KeyValuePair) string {
-	resp, err := Client1.QueryContract(assetContractName, method, kvs, -1)
-	
-	if err!=nil{
-		fmt.Printf("error: %v\n",err)
-		return ""
-	}
-	fmt.Printf("QUERY asset contract [%s] resp: %+v\n", method, resp)
-
-	err = examples.CheckProposalRequestResp(resp, true)
-	if err!=nil{
-		fmt.Printf("error: %v\n",err)
-		return ""
-	}
-	return string(resp.ContractResult.Result)
-}
+//func userContractAssetQuery(method string, kvs []*common.KeyValuePair) string {
+//	resp, err := Client1.QueryContract(assetContractName, method, kvs, -1)
+//
+//	if err!=nil{
+//		fmt.Printf("error: %v\n",err)
+//		return ""
+//	}
+//	fmt.Printf("QUERY asset contract [%s] resp: %+v\n", method, resp)
+//
+//	//err = examples.CheckProposalRequestResp(resp, true)
+//	//if err!=nil{
+//	//	fmt.Printf("error: %v\n",err)
+//	//	return ""
+//	//}
+//	return string(resp.ContractResult.Result)
+//}
 
 
 //func getBalance(addr string) int32{
@@ -321,29 +342,29 @@ func userContractAssetQuery(method string, kvs []*common.KeyValuePair) string {
 //	return val
 //}
 
-func getBalance(client *sdk.ChainClient, addr string) {
-	kvs := []*common.KeyValuePair{
-		{
-			Key:   "owner",
-			Value: []byte(addr),
-		},
-	}
-
-	balance := testUserContractAssetQuery(client, "balance_of", kvs)
-
-	fmt.Printf("client [%s] balance: %s\n", addr, balance)
-}
-
-func testUserContractAssetQuery(client *sdk.ChainClient, method string, kvs []*common.KeyValuePair) string {
-	resp, err := client.QueryContract(assetContractName, method, kvs, -1)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	fmt.Printf("QUERY asset contract [%s] resp: %+v\n", method, resp)
-
-	err = examples.CheckProposalRequestResp(resp, true)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	return string(resp.ContractResult.Result)
-}
+//func getBalance(client *sdk.ChainClient, addr string) {
+//	kvs := []*common.KeyValuePair{
+//		{
+//			Key:   "owner",
+//			Value: []byte(addr),
+//		},
+//	}
+//
+//	balance := testUserContractAssetQuery(client, "balance_of", kvs)
+//
+//	fmt.Printf("client [%s] balance: %s\n", addr, balance)
+//}
+//
+//func testUserContractAssetQuery(client *sdk.ChainClient, method string, kvs []*common.KeyValuePair) string {
+//	resp, err := client.QueryContract(assetContractName, method, kvs, -1)
+//	if err != nil {
+//		log.Fatalln(err)
+//	}
+//	fmt.Printf("QUERY asset contract [%s] resp: %+v\n", method, resp)
+//
+//	err = examples.CheckProposalRequestResp(resp, true)
+//	if err != nil {
+//		log.Fatalln(err)
+//	}
+//	return string(resp.ContractResult.Result)
+//}

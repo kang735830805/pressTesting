@@ -1,7 +1,8 @@
 package qps
 
 import (
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	sdk "chainmaker.org/chainmaker-sdk-go"
+	//sdk ""
 	"chainpress/pkg/sdkop"
 	"fmt"
 	"strconv"
@@ -54,10 +55,11 @@ func syncTps(num int) error {
 	sNum := 0
 	for i := 0 ; i <= num; i++ {
 		//go InvoceChaincode(clients[i], loop, name, method, args, m)
-		if sNum == len(sdkList)-1 {
+		if sNum >= len(sdkList)-1 {
 			sNum = 0
 		}
 		go getTxByTxId(clients[sNum], txId)
+		sNum++
 	}
 	timeStart := time.Now().UnixNano()
 	wg.Wait()

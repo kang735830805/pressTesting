@@ -2,6 +2,12 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/chainmaker-sdk-go" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/chainmaker-sdk-go/common" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/chainmaker-sdk-go/pb/proto" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/pkg/chainmaker-sdk-go" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/pkg/chainmaker-sdk-go/common" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/pkg/chainmaker-sdk-go/pb/proto" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/pkg/sdk-go" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/sdk-go" vcs="Git" />
   </component>

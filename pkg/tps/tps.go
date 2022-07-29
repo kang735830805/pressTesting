@@ -1,8 +1,9 @@
 package tps
 
 import (
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	sdk "chainmaker.org/chainmaker-sdk-go"
 	"chainpress/pkg/sdkop"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -14,10 +15,10 @@ var wg = sync.WaitGroup{}
 
 
 //func InvoceChaincode(client1,client2 *sdk.ChainClient, loop int, name, method, args string){
-func InvoceChaincode(client *sdk.ChainClient, loop int, name, method, args string){
+func InvoceChaincode(client *sdk.ChainClient, loop int, name, method string , args map[string]string){
 	addr2 := sdkop.UserContractAssetQuery(client, false, name, method, args)
 	for i := 0; i < loop; i++ {
-		sdkop.UserContractAssetInvoke(client, name, method, args, "1", addr2, false) //最后一个参数为是否同步获取交易结果？
+		sdkop.UserContractAssetInvoke(client, name, method, "1", addr2, args,false) //最后一个参数为是否同步获取交易结果？
 	}
 	wg.Done()
 }
@@ -59,12 +60,14 @@ func syncTps(num int) (err error) {
 	wg.Add(num)
 	timeStart := time.Now().UnixNano()
 	sNum := 0
-
+	m := make(map[string]string)
+	err = json.Unmarshal([]byte(args), &m)
 	for i := 0 ; i <= num; i++ {
-		if sNum == len(sdkList)-1 {
+		if sNum >= len(sdkList)-1 {
 			sNum = 0
 		}
-		go InvoceChaincode(clients[sNum], loop, name, method, args)
+		go InvoceChaincode(clients[sNum], loop, name, method, m)
+		sNum++
 	}
 
 	wg.Wait()

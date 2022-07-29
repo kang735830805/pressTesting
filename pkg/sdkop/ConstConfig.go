@@ -1,6 +1,6 @@
 package sdkop
 import (
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	sdk "chainmaker.org/chainmaker-sdk-go"
 	"fmt"
 ) 
 	
