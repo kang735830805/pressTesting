@@ -9,14 +9,14 @@ import (
 	"unsafe"
 )
 
-func Connect_chain(tp int, sdkConfigPath string) *sdk.ChainClient{
+func Connect_chain(sdkConfigPath string) *sdk.ChainClient{
 	
 	chainClient, err :=createClientWithConfig(sdkConfigPath)
 	//if 2==tp{
 	//	chainClient, err =createClientWithConfig(sdkConfigPath2)
 	//}
 	if err!=nil{
-		fmt.Println(err)
+		fmt.Errorf(err.Error())
 		return nil
 	}
 	return chainClient

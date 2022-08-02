@@ -20,8 +20,10 @@ import (
 //var args string
 //var sdkPath string
 
+
 func TestRunTps(t *testing.T) {
-	loop, concurrency, name, method, args, sdkPath, threadNum = 1, 5, "fact", "save", "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}", "../../sdk_config2.yml", 10
+	loop, concurrency, threadNum, name, method, parameter, sdkPath = 1, 5,1, "fact", "save", "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}", "../../sdk_config2.yml"
+	//loop, concurrency, threadNum, name, method, parameter, sdkPath = 1000, 1,1000, "fact", "save", "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}", "../../sdk_config2.yml"
 	//
 	//fmt.Println(loop)
 	//fmt.Println(concurrency)
@@ -29,6 +31,23 @@ func TestRunTps(t *testing.T) {
 	//fmt.Println(method)
 	//fmt.Println(args)
 	//fmt.Println(sdkPath)
+	//dir, _ := os.ReadDir("../../")
+	//for _, file := range dir {
+	//	fmt.Println(file.Name())
+	//}
+
 	e := RunTps()
 	fmt.Println(e)
+	//hex.DecodeString()
+
+
 }
+
+//func StringToBytes(s string) []byte {
+//	return *(*[]byte)(unsafe.Pointer(
+//		&struct {
+//			string
+//			Cap int
+//		}{s, len(s)},
+//	))
+//}

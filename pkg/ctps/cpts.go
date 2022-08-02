@@ -20,7 +20,7 @@ func RunCTps() (err error) {
 	}
 	clients1:=make([]*sdk.ChainClient,concurrency)
 	for i := 0; i < concurrency;i++ {
-		clients1[i]=sdkop.Connect_chain(1, sdkPath)
+		clients1[i]=sdkop.Connect_chain(sdkPath)
 	}
 	fmt.Println("============ application-golang starts ============")
 
@@ -43,7 +43,7 @@ func syncTps(num int) error {
 	clients:=make([]*sdk.ChainClient,num)
 
 	for i := 0; i < num;i++ {
-		clients[i]=sdkop.Connect_chain(1, sdkPath)
+		clients[i]=sdkop.Connect_chain(sdkPath)
 	}
 	wg.Add(num)
 	m := sync.Map{}
