@@ -65,6 +65,7 @@ func RunTps() (err error) {
 	timeEnd := time.Now().UnixNano()
 	count := float64(timeCount)
 	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
+
 	fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "TPS:", count/timeResult)
 	return err
 }
@@ -79,11 +80,11 @@ func syncTps(num int, ctx context.Context, clients []*sdk.ChainClient) {
 		if sNum > len(clients)-1 {
 			sNum = 0
 		}
+
 		InvoceChaincode(clients[sNum], name, method, parameter)
 
 		sNum++
 	}
-
 
 	timeCount := num
 	timeEnd := time.Now().UnixNano()
