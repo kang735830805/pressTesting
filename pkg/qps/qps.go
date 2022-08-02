@@ -67,8 +67,8 @@ func RunQps() (err error) {
 func syncQps(num int, ctx context.Context, clients []*sdk.ChainClient) {
 
 	sNum := 0
-  timeStart := time.Now().UnixNano()
 
+	timeStart := time.Now().UnixNano()
 	for i := 0 ; i <= num; i++ {
 
 		if sNum == len(clients)-1 {
