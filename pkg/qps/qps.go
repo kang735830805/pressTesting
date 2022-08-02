@@ -2,6 +2,9 @@ package qps
 
 import (
 	sdk "chainmaker.org/chainmaker-sdk-go"
+	"context"
+	"math"
+
 	//sdk ""
 	"chainpress/pkg/sdkop"
 	"fmt"
@@ -18,21 +21,44 @@ func RunQps() (err error) {
 	if threadNum < 1 {
 		return fmt.Errorf("threadNum should not less 1")
 	}
+	ctx := context.Background()
 
 	fmt.Println("============ application-golang starts ============")
 	timeStart := time.Now().UnixNano()
 
-	for i := 0; i < loop; i = i + threadNum {
 
-		if loop < i + threadNum && loop > i {
-			err = syncTps(loop-i)
-		} else if loop > threadNum {
-			err = syncTps(threadNum)
-		} else {
-			err = syncTps(loop)
-		}
+	sdkList := strings.Split(sdkPath, ",")
 
+	clients:=make([]*sdk.ChainClient,len(sdkList))
+
+	for i := 0; i <= len(sdkList)-1;i++ {
+		clients[i]=sdkop.Connect_chain(sdkList[i])
 	}
+
+	for i := 0; i < loop; i = i+(threadNum*concurrency) {
+		// todo 进程处理进程内部交易的逻辑
+		if loop <= i+(threadNum*concurrency) && loop > i  {
+			wg.Add(int(math.Floor(float64((loop-i)/concurrency))))
+
+			for t := 0; t < int(math.Floor(float64((loop-i)/concurrency))); t++ {
+				go syncQps(concurrency, ctx, clients)
+			}
+		} else if loop > i+(threadNum*concurrency) {
+			wg.Add(threadNum)
+
+			for t:= 0; t < threadNum; t++ {
+				go syncQps(concurrency, ctx, clients)
+			}
+		} else {
+			wg.Add(int(math.Floor(float64((loop-i)/concurrency))))
+
+			for t:= 0; t < int(math.Floor(float64((loop-i)/concurrency))); t++ {
+				go syncQps(concurrency, ctx, clients)
+			}
+		}
+		wg.Wait()
+	}
+
 	timeCount := loop
 	timeEnd := time.Now().UnixNano()
 	count := float64(timeCount)
@@ -42,38 +68,26 @@ func RunQps() (err error) {
 	return err
 }
 
-func syncTps(num int) error {
-	sdkList := strings.Split(sdkPath, ",")
 
-	clients:=make([]*sdk.ChainClient,len(sdkList))
+func syncQps(num int, ctx context.Context, clients []*sdk.ChainClient) {
 
-	for i := 0; i <= len(sdkList)-1;i++ {
-		clients[i]=sdkop.Connect_chain(1, sdkList[i])
-	}
-	wg.Add(num)
-	//timeStart := time.Now().UnixNano()
+	timeStart := time.Now().UnixNano()
+
 	sNum := 0
-	for i := 0 ; i <= num; i++ {
-		//go InvoceChaincode(clients[i], loop, name, method, args, m)
-		if sNum >= len(sdkList)-1 {
+	for i := 0 ; i < num; i++ {
+		if sNum > len(clients)-1 {
 			sNum = 0
 		}
-		go getTxByTxId(clients[sNum], txId)
+		getTxByTxId(clients[sNum], txId)
 		sNum++
 	}
-	timeStart := time.Now().UnixNano()
-	wg.Wait()
-
-	timeCount := loop
+	timeCount := num
 	timeEnd := time.Now().UnixNano()
-	//timeEnd := time.Now().Unix()
 	count := float64(timeCount)
 	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
 	fmt.Println(timeResult)
 	fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "QPS:", count/timeResult)
-	return nil
 }
-
 
 func getTxByTxId(client *sdk.ChainClient, txid string)  {
 	_, err := client.GetTxByTxId(txid)

@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-func Connect_chain(tp int, sdkConfigPath string) *sdk.ChainClient{
+func Connect_chain(sdkConfigPath string) *sdk.ChainClient{
 	
 	chainClient, err :=createClientWithConfig(sdkConfigPath)
 	//if 2==tp{
