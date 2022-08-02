@@ -58,7 +58,6 @@ func RunQps() (err error) {
 	timeCount := loop
 	timeEnd := time.Now().UnixNano()
 	count := float64(timeCount)
-	//timeResult := float64(timeEnd-timeStart)
 	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
 	fmt.Println("ToTalThroughput:", timeCount, "ToTalDuration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "AvgTPS:", count/timeResult)
 	return err
@@ -67,16 +66,16 @@ func RunQps() (err error) {
 
 func syncQps(num int, ctx context.Context, clients []*sdk.ChainClient) {
 
-	//timeStart := time.Now().UnixNano()
 	sNum := 0
+  timeStart := time.Now().UnixNano()
+
 	for i := 0 ; i <= num; i++ {
-		//go InvoceChaincode(clients[i], loop, name, method, args, m)
+
 		if sNum == len(clients)-1 {
 			sNum = 0
 		}
 		getTxByTxId(clients[sNum], txId)
 	}
-	timeStart := time.Now().UnixNano()
 
 	timeCount := loop
 	timeEnd := time.Now().UnixNano()
