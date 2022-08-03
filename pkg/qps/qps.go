@@ -38,8 +38,6 @@ func RunQps() (err error) {
 	for i := 0; i < loop; i = i+(threadNum*concurrency) {
 		// todo 进程处理进程内部交易的逻辑
 		tNum := threadNum
-
-
 		con := concurrency
 		timeCount := tNum*concurrency
 
@@ -61,7 +59,7 @@ func RunQps() (err error) {
 			wg.Add(tNum)
 			timeCount = con
 		}
-		for t:= 0; t < int(math.Floor(float64((loop-i)/concurrency))); t++ {
+		for t:= 0; t < tNum; t++ {
 			go syncQps(concurrency, ctx, clients)
 		}
 		timeStartLocal := time.Now().UnixNano()
