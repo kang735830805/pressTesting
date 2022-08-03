@@ -71,7 +71,7 @@ func RunTps() (err error) {
 		count := float64(timeCount)
 		timeResult := float64((timeEndLocal-timeStartLocal)/1e6) / 1000.0
 		fmt.Println(timeResult)
-		fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "QPS:", count/timeResult)
+		fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "TPS:", count/timeResult)
 	}
 	timeCount := loop
 	timeEnd := time.Now().UnixNano()
