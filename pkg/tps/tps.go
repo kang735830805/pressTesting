@@ -36,30 +36,42 @@ func RunTps() (err error) {
 	for i := 0; i <= len(sdkList)-1;i++ {
 		clients[i]=sdkop.Connect_chain(sdkList[i])
 	}
-
 	for i := 0; i < loop; i = i+(threadNum*concurrency) {
 		// todo 进程处理进程内部交易的逻辑
+		tNum := threadNum
+		con := concurrency
+		timeCount := tNum*concurrency
 
-		if loop <= i+(threadNum*concurrency) && loop > i  {
-			wg.Add(int(math.Floor(float64((loop-i)/concurrency))))
+		if loop < i+(threadNum*concurrency) && loop > i  {
+			tNum = int(math.Floor(float64((loop-i)/concurrency)))
+			wg.Add(tNum)
+			timeCount = tNum*concurrency
 
-			for t := 0; t < int(math.Floor(float64((loop-i)/concurrency))); t++ {
-				go syncTps(concurrency, ctx, clients)
-			}
 		} else if loop > i+(threadNum*concurrency) {
 			wg.Add(threadNum)
+		} else if loop <= i+(threadNum*concurrency) && loop-i < concurrency {
+			wg.Add(1)
+			con = loop-i
+			timeCount = con
+			timeCount = 1*concurrency
 
-			for t:= 0; t < threadNum; t++ {
-				go syncTps(concurrency, ctx, clients)
-			}
 		} else {
-			wg.Add(int(math.Floor(float64((loop-i)/concurrency))))
-
-			for t:= 0; t < int(math.Floor(float64((loop-i)/concurrency))); t++ {
-				go syncTps(concurrency, ctx, clients)
-			}
+			tNum = int(math.Floor(float64((loop-i)/concurrency)))
+			wg.Add(tNum)
+			timeCount = con
 		}
+
+		for t:= 0; t < tNum; t++ {
+			go syncTps(concurrency, ctx, clients)
+		}
+		timeStartLocal := time.Now().UnixNano()
 		wg.Wait()
+
+		timeEndLocal := time.Now().UnixNano()
+		count := float64(timeCount)
+		timeResult := float64((timeEndLocal-timeStartLocal)/1e6) / 1000.0
+		fmt.Println(timeResult)
+		fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "QPS:", count/timeResult)
 	}
 	timeCount := loop
 	timeEnd := time.Now().UnixNano()
@@ -73,24 +85,13 @@ func RunTps() (err error) {
 
 func syncTps(num int, ctx context.Context, clients []*sdk.ChainClient) {
 
-	timeStart := time.Now().UnixNano()
 	sNum := 0
-
 	for i := 0 ; i < num; i++ {
 		if sNum > len(clients)-1 {
 			sNum = 0
 		}
-
 		InvoceChaincode(clients[sNum], name, method, parameter)
-
 		sNum++
 	}
-
-	timeCount := num
-	timeEnd := time.Now().UnixNano()
-	count := float64(timeCount)
-	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
-	//timeResult := float64(timeEnd-timeStart)
-	fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "TPS:", count/timeResult)
-	defer wg.Done()
+	wg.Done()
 }
