@@ -3,9 +3,12 @@ package ctps
 import (
 	sdk "chainmaker.org/chainmaker-sdk-go"
 	"chainpress/pkg/sdkop"
+	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -25,57 +28,85 @@ func RunCTps() (err error) {
 	}
 	fmt.Println("============ application-golang starts ============")
 
-	for i := 0; i < concurrency; i = i + threadNum {
+	ctx := context.Background()
+	timeStart := time.Now().UnixNano()
 
-		if concurrency < i + threadNum && concurrency > i {
-			err = syncTps(concurrency-i)
-		} else if concurrency > threadNum {
-			err = syncTps(threadNum)
+	sdkList := strings.Split(sdkPath, ",")
+
+	clients:=make([]*sdk.ChainClient,len(sdkList))
+	for i := 0; i <= len(sdkList)-1;i++ {
+		clients[i]=sdkop.Connect_chain(sdkList[i])
+	}
+
+	for i := 0; i < loop; i = i+(threadNum*concurrency) {
+		// todo 进程处理进程内部交易的逻辑
+		tNum := threadNum
+		con := concurrency
+		timeCount := tNum*concurrency
+
+		if loop < i+(threadNum*concurrency) && loop > i  {
+			tNum = int(math.Floor(float64((loop-i)/concurrency)))
+			wg.Add(tNum)
+			timeCount = tNum*concurrency
+
+		} else if loop > i+(threadNum*concurrency) {
+			wg.Add(threadNum)
+		} else if loop <= i+(threadNum*concurrency) && loop-i < concurrency {
+			wg.Add(1)
+			con = loop-i
+			timeCount = con
+			timeCount = 1*concurrency
+
 		} else {
-			err = syncTps(concurrency)
+			tNum = int(math.Floor(float64((loop-i)/concurrency)))
+			wg.Add(tNum)
+			timeCount = con
 		}
 
+		for t:= 0; t < tNum; t++ {
+			go syncTps(concurrency, ctx, clients)
+		}
+		timeStartLocal := time.Now().UnixNano()
+		wg.Wait()
+
+		timeEndLocal := time.Now().UnixNano()
+		count := float64(timeCount)
+		timeResult := float64((timeEndLocal-timeStartLocal)/1e6) / 1000.0
+		fmt.Println(timeResult)
+		fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "QPS:", count/timeResult)
 	}
+
+	timeCount := loop
+	timeEnd := time.Now().UnixNano()
+	count := float64(timeCount)
+	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
+
+	fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "TPS:", count/timeResult)
 
 	return err
 }
 
-func syncTps(num int) (err error) {
-	clients:=make([]*sdk.ChainClient,num)
-
-	for i := 0; i < num;i++ {
-		clients[i]=sdkop.Connect_chain(sdkPath)
-	}
-	wg.Add(num)
+func syncTps(num int, ctx context.Context, clients []*sdk.ChainClient) (err error) {
 	m := sync.Map{}
-	ma := make(map[string]string)
 
-	err = json.Unmarshal([]byte(parameter), &ma)
+	sNum := 0
+	pMap := make(map[string]string)
+	err = json.Unmarshal([]byte(parameter), &pMap)
 	for i := 0 ; i < num; i++ {
-		go InvoceChaincode(clients[i], loop, name, method, ma, m)
+		if sNum > len(clients)-1 {
+			sNum = 0
+		}
+		InvoceChaincode(clients[i], loop, name, method, pMap, m)
+		sNum++
 	}
-	timeStart := time.Now().UnixNano()
-	wg.Wait()
-
-	//m.Range(func(key, value interface{}) bool {
-	//
-	//})
-	timeCount := loop * concurrency
-	timeEnd := time.Now().UnixNano()
-	count := float64(timeCount)
-	fmt.Println(count)
-	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
-	fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "TPS:", count/timeResult)
 	return nil
 }
 
 
-//func InvoceChaincode(client1,client2 *sdk.ChainClient, loop int, name, method, args string){
-func InvoceChaincode(client *sdk.ChainClient, loop int, name, method string ,paramers map[string]string, m sync.Map){
-	var txid string = ""
-	addr2 := sdkop.UserContractAssetQuery(client, false, name, method, paramers)
+func InvoceChaincode(client *sdk.ChainClient, loop int, name, method string, args map[string]string, m sync.Map){	var txid string = ""
 	for i := 0; i < loop; i++ {
-		txid = sdkop.UserContractAssetInvoke(client, name, method, "1", addr2, paramers,false) //最后一个参数为是否同步获取交易结果？
+		txid = sdkop.UserContractAssetInvoke(client, name, method,"1", "",args, false) //最后一个参数为是否同步获取交易结果？
+
 	}
 	wg.Done()
 	if txid != "" {

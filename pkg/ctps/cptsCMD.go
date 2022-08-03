@@ -25,11 +25,12 @@ func CtpsCMD() *cobra.Command {
 		},
 	}
 	flags := keyCmd.Flags()
-	flags.IntVarP(&loop, "loop", "l", 1, "合约执行循环数量 eg. 1000")
-	flags.IntVarP(&concurrency, "concurrency", "c", 1, "并发数量. eg. 10")
+	flags.IntVarP(&loop, "loop", "l", 1, "交易执行总数量 eg. 1000")
+	flags.IntVarP(&concurrency, "concurrency", "c", 1, "进程内交易数量. eg. 10")
+	flags.IntVarP(&threadNum, "threadNum", "t", 1, "进程数量. eg. 10")
 	flags.StringVarP(&name, "name", "n", "", "合约名称")
 	flags.StringVarP(&method, "method", "m", "", "合约内的方法")
-	flags.StringVarP(&parameter, "args", "a", "", "合约参数")
+	flags.StringVarP(&parameter, "parameter", "p", "", "合约参数")
 	flags.StringVarP(&sdkPath, "sdkPath", "s", "", "SdkConfig路径")
 	return keyCmd
 }
