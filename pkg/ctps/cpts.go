@@ -1,15 +1,18 @@
 package ctps
 
 import (
+	"chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"chainpress/pkg/sdkop"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 )
 
 var wg sync.WaitGroup
@@ -99,8 +102,22 @@ func syncTps(num int, ctx context.Context, clients []*sdk.ChainClient) error {
 
 func InvoceChaincode(client *sdk.ChainClient, loop int, name, method, args string, m sync.Map){
 	var txid string = ""
+
+	ma := make(map[string]string)
+	err := json.Unmarshal([]byte(parameter), &ma)
+	if err != nil {
+		fmt.Errorf(err.Error())
+	}
+	kvs := []*common.KeyValuePair{}
+
+	for k,v := range ma {
+		kvs = append(kvs, &common.KeyValuePair{
+			Key: k,
+			Value: *(*[]byte)(unsafe.Pointer(&v)),
+		})
+	}
 	for i := 0; i < loop; i++ {
-		txid = sdkop.UserContractAssetInvoke(client, name, method, args, "1", "", false) //最后一个参数为是否同步获取交易结果？
+		txid = sdkop.UserContractAssetInvoke(client, name, method, kvs, "1", "", false) //最后一个参数为是否同步获取交易结果？
 	}
 	wg.Done()
 	if txid != "" {

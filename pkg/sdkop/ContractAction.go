@@ -5,11 +5,9 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"chainmaker.org/chainmaker/sdk-go/v2/examples"
-	"encoding/json"
 	"fmt"
 	"strings"
-	"unsafe"
-
+	"time"
 	//"chainmaker.org/chainmaker-sdk-go/pb/protogo/common"
 	"log"
 )
@@ -236,7 +234,7 @@ func invokeUserContract(client *sdk.ChainClient, contractName, method, txId stri
 	}
 
 	if !withSyncResult {
-		fmt.Printf("invoke contract success, resp: [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, resp.TxId)
+		fmt.Printf("invoke contract success, resp: [code:%d]/[msg:%s]/[txId:%s]/[contractResult:%s]\n", resp.Code, resp.Message, resp.TxId, time.Now())
 	} else {
 		fmt.Printf("invoke contract success, resp: [code:%d]/[msg:%s]/[contractResult:%s]\n", resp.Code, resp.Message, resp.ContractResult)
 	}
@@ -249,21 +247,7 @@ func userContractAssetInvokeRegister(client *sdk.ChainClient, method string, wit
 	return txid, err
 }
 
-func userContractAssetInvoke(client *sdk.ChainClient, name, method, args, amount, addr string, withSyncResult bool) (string, error) {
-
-	m := make(map[string]string)
-	err := json.Unmarshal([]byte(args), &m)
-	if err != nil {
-		return "", err
-	}
-	kvs := []*common.KeyValuePair{}
-
-	for k,v := range m {
-		kvs = append(kvs, &common.KeyValuePair{
-			Key: k,
-			Value: *(*[]byte)(unsafe.Pointer(&v)),
-		})
-	}
+func userContractAssetInvoke(client *sdk.ChainClient, name, method string, kvs []*common.KeyValuePair, amount, addr string, withSyncResult bool) (string, error) {
 
 	txid, err := invokeUserContract(client, name, method, "", kvs, withSyncResult)
 
