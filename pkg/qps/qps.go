@@ -3,8 +3,6 @@ package qps
 import (
 	sdk "chainmaker.org/chainmaker-sdk-go"
 	"context"
-	"math"
-
 	//sdk ""
 	"chainpress/pkg/sdkop"
 	"fmt"
@@ -24,7 +22,6 @@ func RunQps() (err error) {
 	ctx := context.Background()
 
 	fmt.Println("============ application-golang starts ============")
-	timeStart := time.Now().UnixNano()
 
 
 	sdkList := strings.Split(sdkPath, ",")
@@ -35,43 +32,17 @@ func RunQps() (err error) {
 		clients[i]=sdkop.Connect_chain(sdkList[i])
 	}
 
-	for i := 0; i < loop; i = i+(threadNum*concurrency) {
-		// todo 进程处理进程内部交易的逻辑
-		tNum := threadNum
-		con := concurrency
-		timeCount := tNum*concurrency
+	timeStart := time.Now().UnixNano()
 
-		if loop < i+(threadNum*concurrency) && loop > i  {
-			tNum = int(math.Floor(float64((loop-i)/concurrency)))
-			wg.Add(tNum)
-			timeCount = tNum*concurrency
+	wg.Add(threadNum)
 
-		} else if loop > i+(threadNum*concurrency) {
-			wg.Add(threadNum)
-		} else if loop <= i+(threadNum*concurrency) && loop-i < concurrency {
-			wg.Add(1)
-			con = loop-i
-			timeCount = con
-			timeCount = 1*concurrency
+	for t:= 0; t < threadNum; t++ {
+		go syncQps(concurrency, ctx, clients)
+	}
 
-		} else {
-			tNum = int(math.Floor(float64((loop-i)/concurrency)))
-			wg.Add(tNum)
-			timeCount = con
-		}
-		for t:= 0; t < tNum; t++ {
-			go syncQps(concurrency, ctx, clients)
-		}
-		timeStartLocal := time.Now().UnixNano()
-		wg.Wait()
+	wg.Wait()
 
-		timeEndLocal := time.Now().UnixNano()
-		count := float64(timeCount)
-		timeResult := float64((timeEndLocal-timeStartLocal)/1e6) / 1000.0
-		fmt.Println(timeResult)
-		fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "QPS:", count/timeResult)	}
-
-	timeCount := loop
+	timeCount := threadNum*concurrency
 	timeEnd := time.Now().UnixNano()
 	count := float64(timeCount)
 	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
@@ -81,21 +52,26 @@ func RunQps() (err error) {
 
 
 func syncQps(num int, ctx context.Context, clients []*sdk.ChainClient) {
+	var wgs sync.WaitGroup
+
 	sNum := 0
+	wgs.Add(num)
 	for i := 0 ; i < num; i++ {
 		if sNum > len(clients)-1 {
 			sNum = 0
 		}
-		getTxByTxId(clients[sNum], txId)
+		go getTxByTxId(clients[sNum], txId, &wgs)
 		sNum++
 	}
-	wg.Done()
 
+	wgs.Wait()
+	defer wg.Done()
 }
 
-func getTxByTxId(client *sdk.ChainClient, txid string)  {
+func getTxByTxId(client *sdk.ChainClient, txid string, wgs *sync.WaitGroup)  {
 	_, err := client.GetTxByTxId(txid)
 	if err != nil {
 		fmt.Println(err)
 	}
+	defer wgs.Done()
 }
