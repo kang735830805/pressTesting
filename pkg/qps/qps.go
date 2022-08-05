@@ -5,7 +5,6 @@ import (
 	"chainpress/pkg/sdkop"
 	"context"
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,8 +21,6 @@ func RunQps() (err error) {
 	ctx := context.Background()
 
 	fmt.Println("============ application-golang starts ============")
-	timeStart := time.Now().UnixNano()
-
 	sdkList := strings.Split(sdkPath, ",")
 
 	clients:=make([]*sdk.ChainClient,len(sdkList))
@@ -31,70 +28,50 @@ func RunQps() (err error) {
 	for i := 0; i <= len(sdkList)-1;i++ {
 		clients[i]=sdkop.Connect_chain(sdkList[i])
 	}
-	for i := 0; i < loop; i = i+(threadNum*concurrency) {
-		// todo 进程处理进程内部交易的逻辑
-		tNum := threadNum
-		con := concurrency
-		timeCount := tNum*concurrency
 
-		if loop < i+(threadNum*concurrency) && loop > i  {
-			tNum = int(math.Floor(float64((loop-i)/concurrency)))
-			wg.Add(tNum)
-			timeCount = tNum*concurrency
+	wg.Add(threadNum)
 
-		} else if loop > i+(threadNum*concurrency) {
-			wg.Add(threadNum)
-		} else if loop <= i+(threadNum*concurrency) && loop-i < concurrency {
-			wg.Add(1)
-			con = loop-i
-			timeCount = con
-			timeCount = 1*concurrency
+	timeStart := time.Now().UnixNano()
 
-		} else {
-			tNum = int(math.Floor(float64((loop-i)/concurrency)))
-			wg.Add(tNum)
-			timeCount = con
-		}
-
-		for t := 0; t < tNum; t++ {
-			go syncQps(con, ctx, clients)
-		}
-
-		timeStartLocal := time.Now().UnixNano()
-		wg.Wait()
-
-		timeEndLocal := time.Now().UnixNano()
-		count := float64(timeCount)
-		timeResult := float64((timeEndLocal-timeStartLocal)/1e6) / 1000.0
-		fmt.Println(timeResult)
-		fmt.Println("Throughput:", timeCount, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "QPS:", count/timeResult)
+	for t := 0; t < threadNum; t++ {
+		go syncQps(concurrency, ctx, clients)
 	}
 
-	timeCount := loop
+	wg.Wait()
 	timeEnd := time.Now().UnixNano()
-	count := float64(timeCount)
+	count := float64(threadNum*concurrency)
 	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
-	fmt.Println("ToTalThroughput:", timeCount, "ToTalDuration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "QPS:", count/timeResult)
+	fmt.Println(timeResult)
+	fmt.Println("Throughput:", count, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "QPS:", count/timeResult)
+
 	return err
 }
 
 
 func syncQps(num int, ctx context.Context, clients []*sdk.ChainClient) {
+	var wgs sync.WaitGroup
+
 	sNum := 0
-	for i := 0 ; i <= num; i++ {
+	wgs.Add(num)
+	for i := 0 ; i < num; i++ {
 		if sNum > len(clients)-1 {
 			sNum = 0
 		}
-		getTxByTxId(clients[sNum], txId)
+		go getTxByTxId(clients[sNum], txId, &wgs)
 		sNum++
+		fmt.Println(i)
 	}
-	wg.Done()
+	wgs.Wait()
+
+	defer wg.Done()
 }
 
 
-func getTxByTxId(client *sdk.ChainClient, txid string)  {
-	_, err := client.GetTxByTxId(txid)
+func getTxByTxId(client *sdk.ChainClient, txid string, wgs *sync.WaitGroup) {
+	resp, err := client.GetTxByTxId(txid)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(err.Error())
 	}
+	fmt.Println(resp)
+	defer wgs.Done()
 }

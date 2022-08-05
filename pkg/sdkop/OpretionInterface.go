@@ -121,8 +121,8 @@ func UserContractAssetQuery(client *sdk.ChainClient, id bool,  name, method, arg
 }
 
 
-func UserContractAssetInvoke(client *sdk.ChainClient, name, method, args, amount, addr string, withSyncResult bool) string {
-	txid, err := userContractAssetInvoke(client, name, method, args, amount,addr,withSyncResult)
+func UserContractAssetInvoke(client *sdk.ChainClient, name, method string, kvs []*common.KeyValuePair, amount, addr string, withSyncResult bool) string {
+	txid, err := userContractAssetInvoke(client, name, method, kvs, amount,addr,withSyncResult)
 	if err!=nil {
 		fmt.Printf("invoke error : %v\n",err)
 	}
