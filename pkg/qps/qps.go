@@ -2,6 +2,7 @@ package qps
 
 import (
 	sdk "chainmaker.org/chainmaker-sdk-go"
+	"chainpress/pkg/cmd"
 	"github.com/panjf2000/ants/v2"
 
 	//sdk ""
@@ -17,14 +18,13 @@ var wg sync.WaitGroup
 
 func RunQps() (err error) {
 
-	if threadNum < 1 {
+	if *cmd.ThreadNum < 1 {
 		return fmt.Errorf("threadNum should not less 1")
 	}
 
 	fmt.Println("============ application-golang starts ============")
 
-
-	sdkList := strings.Split(sdkPath, ",")
+	sdkList := strings.Split(*cmd.SdkPath, ",")
 
 	clients:=make([]*sdk.ChainClient,len(sdkList))
 
@@ -32,12 +32,12 @@ func RunQps() (err error) {
 		clients[i]=sdkop.Connect_chain(sdkList[i])
 	}
 
-	pool, _ := ants.NewPoolWithFunc(loopNum, syncQps)
+	pool, _ := ants.NewPoolWithFunc(*cmd.LoopNum, syncQps)
 
 	defer pool.Release()
 	timeStart := time.Now().UnixNano()
 
-	for i:=0; i<loopNum*threadNum; i++ {
+	for i:=0; i<(*cmd.LoopNum)*(*cmd.ThreadNum); i++ {
 		wg.Add(1)
 
 		pool.Invoke(clients)
@@ -45,7 +45,7 @@ func RunQps() (err error) {
 
 	wg.Wait()
 
-	timeCount := threadNum*loopNum
+	timeCount := (*cmd.LoopNum)*(*cmd.ThreadNum)
 	timeEnd := time.Now().UnixNano()
 	count := float64(timeCount)
 	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
@@ -55,7 +55,6 @@ func RunQps() (err error) {
 
 
 func syncQps(clients interface{}) {
-	//var wgs sync.WaitGroup
 	chainClients := clients.([]*sdk.ChainClient)
 
 	sNum := 0
@@ -64,6 +63,7 @@ func syncQps(clients interface{}) {
 
 	defer wg.Done()
 }
+
 
 func getTxByTxId(client *sdk.ChainClient, txid string) {
 		resp, err := client.GetTxByTxId(txid)

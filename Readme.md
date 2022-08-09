@@ -11,7 +11,7 @@
 
 ####tps命令行Examples：
 ```shell
-./main tps -l 10 -t 10 -n fact -m save -p "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"65432ç34\"}" -s ./sdk_config.yml
+./main tps -l 1 -t 1 -n fact -m save -p "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"65432ç34\"}" -s ./sdk_config.yml
 ```
 
 
@@ -26,5 +26,5 @@
 ####qps命令行Examples：
 ```shell
 #qps 测试
-./main qps -l 100 -t 100 -i '69183a55a91d4d928806bf278b1c93f891ee03cf6b694908b9a275f1d6c12476' -s "./sdk_config.yml"
+./main qps -l 1 -t 1 -i 'f17c89e559e44f99889be0448e6a0704c2e7b505ce644c2ca5022942a9f9ac31' -s "./sdk_config.yml"
 ```
