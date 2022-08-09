@@ -4,7 +4,7 @@ import "github.com/spf13/cobra"
 
 var (
 	//loop int
-	concurrency int
+	loopNum int
 	threadNum int
 	name string
 	method string
@@ -23,7 +23,7 @@ func TpsCMD() *cobra.Command {
 	}
 	flags := keyCmd.Flags()
 	//flags.IntVarP(&loop, "loop", "l", 1, "交易执行总数量 eg. 1000")
-	flags.IntVarP(&concurrency, "concurrency", "c", 1, "进程内交易数量. eg. 10")
+	flags.IntVarP(&loopNum, "loopNum", "l", 1, "进程内交易数量. eg. 10")
 	flags.IntVarP(&threadNum, "threadNum", "t", 1, "进程数量. eg. 10")
 	flags.StringVarP(&name, "name", "n", "", "合约名称")
 	flags.StringVarP(&method, "method", "m", "", "合约内的方法")

@@ -4,9 +4,9 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"chainpress/pkg/sdkop"
-	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/panjf2000/ants/v2"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,7 +19,6 @@ var wg = sync.WaitGroup{}
 
 func InvoceChaincode(client *sdk.ChainClient, name, method string, kvs []*common.KeyValuePair, wgs *sync.WaitGroup){
 	sdkop.UserContractAssetInvoke(client, name, method, kvs, "1", "", false) //最后一个参数为是否同步获取交易结果？
-	wgs.Done()
 }
 
 
@@ -30,7 +29,6 @@ func RunTps() (err error) {
 	}
 
 	fmt.Println("============ application-golang starts ============")
-	ctx := context.Background()
 
 	sdkList := strings.Split(sdkPath, ",")
 
@@ -38,19 +36,20 @@ func RunTps() (err error) {
 	for i := 0; i <= len(sdkList)-1;i++ {
 		clients[i]=sdkop.Connect_chain(sdkList[i])
 	}
-
-	wg.Add(threadNum)
+	pool, _ := ants.NewPoolWithFunc(loopNum, syncTps)
+	defer pool.Release()
 
 	timeStart := time.Now().UnixNano()
+	for i:=0; i<loopNum*threadNum; i++ {
+		wg.Add(1)
 
-	for t:= 0; t < threadNum; t++ {
-		go syncTps(concurrency, ctx, clients)
+		pool.Invoke(clients)
 	}
 
 	wg.Wait()
 
 	timeEnd := time.Now().UnixNano()
-	count := float64(threadNum*concurrency)
+	count := float64(threadNum*loopNum)
 	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
 	fmt.Println(timeResult)
 	fmt.Println("Throughput:", count, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "TPS:", count/timeResult)
@@ -59,8 +58,9 @@ func RunTps() (err error) {
 }
 
 
-func syncTps(num int, ctx context.Context, clients []*sdk.ChainClient) {
-	var wgs sync.WaitGroup
+func syncTps(clients interface{}) {
+	chainClients := clients.([]*sdk.ChainClient)
+
 	m := make(map[string]string)
 	err := json.Unmarshal([]byte(parameter), &m)
 	if err != nil {
@@ -76,15 +76,8 @@ func syncTps(num int, ctx context.Context, clients []*sdk.ChainClient) {
 	}
 
 	sNum := 0
-	wgs.Add(num)
-	for i := 0 ; i < num; i++ {
-		if sNum > len(clients)-1 {
 
-			sNum = 0
-		}
-		go InvoceChaincode(clients[sNum], name, method, kvs, &wgs)
-		sNum++
-	}
-	wgs.Wait()
+	sdkop.UserContractAssetInvoke(chainClients[sNum], name, method, kvs, "1", "", false)
+
 	defer wg.Done()
 }
