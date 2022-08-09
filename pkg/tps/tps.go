@@ -3,9 +3,9 @@ package tps
 import (
 	sdk "chainmaker.org/chainmaker-sdk-go"
 	"chainpress/pkg/sdkop"
-	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/panjf2000/ants/v2"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,9 +15,9 @@ import (
 var wg = sync.WaitGroup{}
 
 
-func InvoceChaincode(client *sdk.ChainClient, name, method string , args map[string]string, wgs *sync.WaitGroup){
+//func InvoceChaincode(client *sdk.ChainClient, name, method string , args map[string]string, wgs *sync.WaitGroup){
+func InvoceChaincode(client *sdk.ChainClient, name, method string , args map[string]string){
 	sdkop.UserContractAssetInvoke(client, name, method, "1", "", args,false) //最后一个参数为是否同步获取交易结果？
-	defer wgs.Done()
 }
 
 
@@ -27,7 +27,6 @@ func RunTps() (err error) {
 	}
 
 	fmt.Println("============ application-golang starts ============")
-	ctx := context.Background()
 	sdkList := strings.Split(sdkPath, ",")
 
 	clients:=make([]*sdk.ChainClient,len(sdkList))
@@ -35,18 +34,20 @@ func RunTps() (err error) {
 		fmt.Println(i)
 		clients[i]=sdkop.Connect_chain(sdkList[i])
 	}
-	wg.Add(threadNum)
-
+	pool, _ := ants.NewPoolWithFunc(loopNum, syncTps)
+	defer pool.Release()
 	timeStart := time.Now().UnixNano()
 
-	for t:= 0; t < threadNum; t++ {
-		go syncTps(concurrency, ctx, clients)
+	for i:=0; i<loopNum*threadNum; i++ {
+		wg.Add(1)
+
+		pool.Invoke(clients)
 	}
 
 	wg.Wait()
 
 	timeEnd := time.Now().UnixNano()
-	timeCount := threadNum*concurrency
+	timeCount := threadNum*loopNum
 	count := float64(timeCount)
 	timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
 	fmt.Println(timeResult)
@@ -55,8 +56,9 @@ func RunTps() (err error) {
 }
 
 
-func syncTps(num int, ctx context.Context, clients []*sdk.ChainClient) {
-	var wgs sync.WaitGroup
+func syncTps(clients interface{}) {
+
+	chainClients := clients.([]*sdk.ChainClient)
 
 	sNum := 0
 	m := make(map[string]string)
@@ -65,15 +67,6 @@ func syncTps(num int, ctx context.Context, clients []*sdk.ChainClient) {
 		fmt.Errorf(err.Error())
 	}
 
-	wgs.Add(num)
-
-	for i := 0 ; i < num; i++ {
-		if sNum > len(clients)-1 {
-			sNum = 0
-		}
-		go InvoceChaincode(clients[sNum], name, method, m, &wgs)
-		sNum++
-	}
-	wgs.Wait()
+	InvoceChaincode(chainClients[sNum], name, method, m)
 	defer wg.Done()
 }
