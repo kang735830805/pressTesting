@@ -22,7 +22,7 @@ import (
 
 
 func TestRunTps(t *testing.T) {
-	loop, concurrency, threadNum, name, method, parameter, sdkPath = 1, 5,1, "fact", "save", "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}", "../../sdk_config2.yml"
+	//loop, concurrency, threadNum, name, method, parameter, sdkPath = 1, 5,1, "fact", "save", "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}", "../../sdk_config2.yml"
 	//loop, concurrency, threadNum, name, method, parameter, sdkPath = 1000, 1,1000, "fact", "save", "{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}", "../../sdk_config2.yml"
 	//
 	//fmt.Println(loop)

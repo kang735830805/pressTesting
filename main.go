@@ -1,31 +1,29 @@
 package main
 
 import (
+	"chainpress/pkg/cmd"
 	"chainpress/pkg/ctps"
 	"chainpress/pkg/qps"
 	"chainpress/pkg/tps"
 	"fmt"
 	"github.com/spf13/cobra"
-	"os"
-	"strings"
 )
 
+func InitCmd()  {
+	cmd.RootCmd.AddCommand(tps.TpsCMD())
+	cmd.RootCmd.AddCommand(ctps.CtpsCMD())
+	cmd.RootCmd.AddCommand(qps.QpsCMD())
+}
 
-
+func GetRootCmd() *cobra.Command {
+	return cmd.RootCmd
+}
 
 func main()  {
 
-	var mainCmd = &cobra.Command{
-		Use:   "press",
-		Short: "Press test cli",
-		Long: strings.TrimSpace(`Command line interface for press ChainMaker`),
-	}
-	mainCmd.AddCommand(tps.TpsCMD())
-	mainCmd.AddCommand(ctps.CtpsCMD())
-	mainCmd.AddCommand(qps.QpsCMD())
-
-	if err := mainCmd.Execute(); err != nil {
+	InitCmd()
+	err := GetRootCmd().Execute()
+	if err != nil {
 		fmt.Errorf(err.Error())
-		os.Exit(1)
 	}
 }
