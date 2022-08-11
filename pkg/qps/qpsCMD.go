@@ -1,6 +1,8 @@
 package qps
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+)
 
 
 
@@ -19,6 +21,6 @@ func QpsCMD() *cobra.Command {
 		},
 	}
 	flags := qpsCmd.Flags()
-	flags.StringVarP(&txId, "txId", "i", "", "合约参数")
+	flags.StringVarP(&txId, "txId", "x", "", "合约参数")
 	return qpsCmd
 }

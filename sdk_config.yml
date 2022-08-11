@@ -3,7 +3,7 @@ chain_client:
   chain_id: "chain1"
 #  chain_id: "chain2"
   # 组织ID
-  org_id: "wx-org.chainmaker.org"
+  org_id: "wx-org1.chainmaker.org"
 #  org_id: "wx-org2.chainmaker.org"
 #  org_id: "wx-org3.chainmaker.org"
   # 客户端用户私钥路径

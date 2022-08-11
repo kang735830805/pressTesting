@@ -2,23 +2,56 @@ package tps
 
 import (
 	sdk "chainmaker.org/chainmaker-sdk-go"
+	clients2 "chainpress/pkg/clients"
 	"chainpress/pkg/cmd"
+	"chainpress/pkg/requests"
+	"chainpress/pkg/schedule"
 	"chainpress/pkg/sdkop"
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/panjf2000/ants/v2"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
 
-var wg = sync.WaitGroup{}
+type TPS struct {
+	requests.Base
+}
+
+//var wg = sync.WaitGroup{}
+func newTPS(tps *TPS) *TPS {
+	return tps
+}
+
+func initTPSWorker(client *sdk.ChainClient) *TPS {
+	timeoutCtx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(*cmd.Duration))
+	t := newTPS(
+		&TPS{
+			requests.Base{
+				Engine:     *schedule.InitEngine(client),
+				Wg:         sync.WaitGroup{},
+				CancelFunc: cancelFunc,
+				CtxFunc:    timeoutCtx,
+			},
+		})
+	return t
+}
+
+func NewTps(client *sdk.ChainClient) []*TPS {
+	t := make([]*TPS, *cmd.ThreadNum)
+	for i,_ := range t {
+		t[i] = initTPSWorker(client)
+	}
+	return t
+}
 
 
 //func InvoceChaincode(client *sdk.ChainClient, name, method string , args map[string]string, wgs *sync.WaitGroup){
-func InvoceChaincode(client *sdk.ChainClient, name, method string , args map[string]string){
+func (t *TPS) InvoceChaincode(client *sdk.ChainClient, name, method string , args map[string]string){
 	sdkop.UserContractAssetInvoke(client, name, method, "1", "", args,false) //最后一个参数为是否同步获取交易结果？
+	defer t.Engine.Wg.Done()
+
 }
 
 
@@ -28,24 +61,17 @@ func RunTps() (err error) {
 	}
 
 	fmt.Println("============ application-golang starts ============")
-	sdkList := strings.Split(*cmd.SdkPath, ",")
-
-	clients:=make([]*sdk.ChainClient,len(sdkList))
-	for i := 0; i <= len(sdkList)-1;i++ {
-		fmt.Println(i)
-		clients[i]=sdkop.Connect_chain(sdkList[i])
-	}
-	pool, _ := ants.NewPoolWithFunc(*cmd.LoopNum, syncTps)
-	defer pool.Release()
+	timeoutCtx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(*cmd.Duration))
 	timeStart := time.Now().UnixNano()
 
-	for i:=0; i<(*cmd.LoopNum)*(*cmd.ThreadNum); i++ {
-		wg.Add(1)
-
-		pool.Invoke(clients)
-	}
-
-	wg.Wait()
+	tps := newTPS(&TPS{
+		requests.Base{
+			Wg:         sync.WaitGroup{},
+			CancelFunc: cancelFunc,
+			CtxFunc:    timeoutCtx,
+		},
+	})
+	tps.asyncJobs()
 
 	timeEnd := time.Now().UnixNano()
 	timeCount := (*cmd.LoopNum)*(*cmd.ThreadNum)
@@ -57,17 +83,76 @@ func RunTps() (err error) {
 }
 
 
-func syncTps(clients interface{}) {
+//func (t *TPS) syncTps(clients interface{}, w *sync.WaitGroup, kvs []*common.KeyValuePair) {
+//	chainClients := clients.(*sdk.ChainClient)
+//
+//	for i:=0; i<*cmd.LoopNum; i++ {
+//		t.Engine.Wg.Add(1)
+//		go t.InvoceChaincode(chainClients, name, method, kvs)
+//	}
+//	t.Engine.Wg.Wait()
+//	w.Done()
+//}
 
-	chainClients := clients.([]*sdk.ChainClient)
+func  (t *TPS) syncTps(clients interface{}, w *sync.WaitGroup, p map[string]string) {
 
-	sNum := 0
+	chainClients := clients.(*sdk.ChainClient)
+
+	for i:=0; i<*cmd.LoopNum; i++ {
+		t.Engine.Wg.Add(1)
+		go t.InvoceChaincode(chainClients, name, method, p)
+	}
+	t.Engine.Wg.Wait()
+	w.Done()}
+
+
+func (t *TPS) asyncJobs()  {
+
+	defer t.tearDown()
+
+	clients:=clients2.CreateClient()
+	engines := NewTps(clients[0])
+	totalBatch, batchCount := int(*cmd.Duration / *cmd.Interval), 0
+
 	m := make(map[string]string)
 	err := json.Unmarshal([]byte(parameter), &m)
 	if err != nil {
 		fmt.Errorf(err.Error())
 	}
+	//
+	p := make(map[string]string)
+	err = json.Unmarshal([]byte(parameter), &p)
+	if err != nil {
+		fmt.Errorf(err.Error())
+	}
 
-	InvoceChaincode(chainClients[sNum], name, method, m)
-	defer wg.Done()
+	ticker := time.NewTicker(time.Duration(*cmd.Interval)*time.Second)
+
+	for ; batchCount < totalBatch; batchCount++ {
+		<-ticker.C
+		var w sync.WaitGroup
+		t.Wg.Add(1)
+		go func() {
+			timeStart := time.Now().UnixNano()
+
+			for _, e := range engines {
+				w.Add(1)
+				go e.syncTps(e.Engine.Args, &w, p)
+			}
+			w.Wait()
+			t.Wg.Done()
+			//defer t.tearDown()
+			timeEnd := time.Now().UnixNano()
+			count := float64((*cmd.LoopNum)*(*cmd.ThreadNum))
+			timeResult := float64((timeEnd-timeStart)/1e6) / 1000.0
+			fmt.Println(timeResult)
+			fmt.Println("Throughput:", count, "Duration:", strconv.FormatFloat(timeResult, 'g', 30, 32)+" s", "QPS:", count/timeResult)
+		}()
+	}
+	t.Wg.Wait()
+}
+
+func (t *TPS) tearDown()  {
+	defer t.CancelFunc()
+	//defer t.Engine.Close()
 }
